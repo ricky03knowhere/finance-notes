@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum WalletType {
+  CASH
+  BANK
+  E_WALLET
+  CREDIT_CARD
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  fullName      String?         @map("full_name")
+  avatar        String?
+  createdAt     DateTime        @default(now()) @map("created_at")
+  wallets       Wallet[]
+  categories    Category[]
+  budgets       Budget[]
+  savingGoals   SavingGoal[]
+  bills         Bill[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Wallet {
+  id             String        @id @default(cuid())
+  userId         String        @map("user_id")
+  name           String
+  type           WalletType    @default(CASH)
+  icon           String
+  color          String
+  balance        Decimal       @db.Decimal(14, 2)
+  initialBalance Decimal       @map("initial_balance") @db.Decimal(14, 2)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
+
+  @@index([userId])
+  @@map("wallets")
+}
+
+model Category {
+  id            String       @id @default(cuid())
+  userId        String       @map("user_id")
+  name          String
+  type          CategoryType
+  color         String
+  icon          String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+  budgets       Budget[]
+
+  @@index([userId])
+  @@map("categories")
+}
+
+model Transaction {
+  id              String         @id @default(cuid())
+  walletId        String         @map("wallet_id")
+  categoryId      String?        @map("category_id")
+  type            TransactionType
+  amount          Decimal        @db.Decimal(14, 2)
+  note            String?
+  transactionDate DateTime       @map("transaction_date")
+  attachment      String?
+  location        String?
+  createdAt       DateTime       @default(now()) @map("created_at")
+  wallet          Wallet         @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  category        Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags            TransactionTag[]
+
+  @@index([walletId])
+  @@index([categoryId])
+  @@map("transactions")
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  categoryId String   @map("category_id")
+  amount     Decimal  @db.Decimal(14, 2)
+  month      Int
+  year       Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("budgets")
+}
+
+model SavingGoal {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  title         String
+  targetAmount  Decimal  @map("target_amount") @db.Decimal(14, 2)
+  currentAmount Decimal  @map("current_amount") @db.Decimal(14, 2)
+  deadline      DateTime
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("saving_goals")
+}
+
+model Bill {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  title     String
+  amount    Decimal  @db.Decimal(14, 2)
+  dueDate   DateTime @map("due_date")
+  recurring Boolean
+  paid      Boolean
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("bills")
+}
+
+model Notification {
+  id      String   @id @default(cuid())
+  userId  String   @map("user_id")
+  title   String
+  body    String
+  isRead  Boolean  @default(false) @map("is_read")
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+model Tag {
+  id              String            @id @default(cuid())
+  name            String            @unique
+  transactionTags TransactionTag[]
+
+  @@map("tags")
+}
+
+model TransactionTag {
+  transactionId String      @map("transaction_id")
+  tagId         String      @map("tag_id")
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  tag           Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([transactionId, tagId])
+  @@map("transaction_tags")
+}
