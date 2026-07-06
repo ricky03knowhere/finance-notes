@@ -158,6 +158,7 @@ export class PrismaWalletRepository implements WalletRepository {
         data: [
           {
             walletId: sourceWallet.id,
+            destinationWalletId: destinationWallet.id,
             categoryId: null,
             type: 'TRANSFER',
             amount: input.amount,

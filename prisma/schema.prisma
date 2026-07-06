@@ -53,7 +53,8 @@ model Wallet {
   initialBalance Decimal       @map("initial_balance") @db.Decimal(14, 2)
   createdAt      DateTime      @default(now()) @map("created_at")
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions   Transaction[]
+  transactions   Transaction[] @relation("TransactionWallet")
+  destinationTransactions Transaction[] @relation("TransactionDestination")
 
   @@index([userId])
   @@map("wallets")
@@ -77,6 +78,7 @@ model Category {
 model Transaction {
   id              String         @id @default(cuid())
   walletId        String         @map("wallet_id")
+  destinationWalletId String?     @map("destination_wallet_id")
   categoryId      String?        @map("category_id")
   type            TransactionType
   amount          Decimal        @db.Decimal(14, 2)
@@ -85,11 +87,13 @@ model Transaction {
   attachment      String?
   location        String?
   createdAt       DateTime       @default(now()) @map("created_at")
-  wallet          Wallet         @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  wallet          Wallet         @relation("TransactionWallet", fields: [walletId], references: [id], onDelete: Cascade)
+  destinationWallet Wallet?      @relation("TransactionDestination", fields: [destinationWalletId], references: [id], onDelete: SetNull)
   category        Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   tags            TransactionTag[]
 
   @@index([walletId])
+  @@index([destinationWalletId])
   @@index([categoryId])
   @@map("transactions")
 }

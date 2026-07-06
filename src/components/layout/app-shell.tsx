@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Wallet } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Tags, Wallet } from 'lucide-react';
 import type { Route } from 'next';
 
 import { cn } from '@/lib/utils';
@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 const NAV_ITEMS = [
   { href: '/' as Route, label: 'Dashboard', icon: LayoutDashboard },
   { href: '/wallet' as Route, label: 'Wallet', icon: Wallet },
+  { href: '/transactions' as Route, label: 'Transaction', icon: ReceiptText },
+  { href: '/categories' as Route, label: 'Category', icon: Tags },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
