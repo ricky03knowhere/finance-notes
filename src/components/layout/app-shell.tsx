@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, CalendarDays, LayoutDashboard, ReceiptText, Tags, Wallet, PiggyBank } from 'lucide-react';
+import { BarChart3, CalendarDays, LayoutDashboard, ReceiptText, Tags, Wallet, PiggyBank, CalendarClock, FileText, TrendingUp } from 'lucide-react';
 import type { Route } from 'next';
 
 import { cn } from '@/lib/utils';
@@ -15,6 +15,9 @@ const NAV_ITEMS = [
   { href: '/budget' as Route, label: 'Budget', icon: BarChart3 },
   { href: '/saving-goal' as Route, label: 'Saving Goal', icon: PiggyBank },
   { href: '/bills' as Route, label: 'Bills', icon: CalendarDays },
+  { href: '/calendar' as Route, label: 'Calendar', icon: CalendarClock },
+  { href: '/reports' as Route, label: 'Reports', icon: FileText },
+  { href: '/analytics' as Route, label: 'Analytics', icon: TrendingUp },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
