@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -45,6 +46,8 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
   const [createOpen, setCreateOpen] = useState(false);
   const [editTransaction, setEditTransaction] = useState<TransactionRecord | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteTransaction, setDeleteTransaction] = useState<TransactionRecord | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const summaryCards = useMemo(
     () => [
@@ -127,10 +130,6 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
   }
 
   async function handleDelete(transactionId: string) {
-    if (!window.confirm('Hapus transaksi ini? Saldo wallet akan disesuaikan kembali.')) {
-      return;
-    }
-
     const response = await fetch(`/api/transactions/${transactionId}`, { method: 'DELETE' });
 
     if (!response.ok) {
@@ -151,14 +150,6 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
   }
 
   async function handleBulkDelete() {
-    if (selectedIds.length === 0) {
-      return;
-    }
-
-    if (!window.confirm(`Hapus ${selectedIds.length} transaksi terpilih?`)) {
-      return;
-    }
-
     const response = await fetch('/api/transactions/bulk-delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -210,7 +201,7 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
               <Plus className="h-4 w-4" />
               Transaksi Baru
             </Button>
-            <Button disabled={selectedIds.length === 0} variant="destructive" onClick={() => void handleBulkDelete()}>
+            <Button disabled={selectedIds.length === 0} variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
               <Trash2 className="h-4 w-4" />
               Hapus Terpilih
             </Button>
@@ -359,11 +350,7 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
                               <CopyPlus className="h-4 w-4" />
                               Duplicate
                             </Button>
-                            <Button size="sm" variant="destructive" onClick={() => void toast.promise(handleDelete(transaction.id), {
-                              loading: 'Menghapus transaksi...',
-                              success: 'Transaksi berhasil dihapus',
-                              error: (error) => (error instanceof Error ? error.message : 'Gagal menghapus transaksi'),
-                            })}>
+                            <Button size="sm" variant="destructive" onClick={() => setDeleteTransaction(transaction)}>
                               <Trash2 className="h-4 w-4" />
                               Delete
                             </Button>
@@ -419,11 +406,7 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
                             <CopyPlus className="h-4 w-4" />
                             Duplicate
                           </Button>
-                          <Button size="sm" variant="destructive" onClick={() => void toast.promise(handleDelete(transaction.id), {
-                            loading: 'Menghapus transaksi...',
-                            success: 'Transaksi berhasil dihapus',
-                            error: (error) => (error instanceof Error ? error.message : 'Gagal menghapus transaksi'),
-                          })}>
+                          <Button size="sm" variant="destructive" onClick={() => setDeleteTransaction(transaction)}>
                             <Trash2 className="h-4 w-4" />
                             Delete
                           </Button>
@@ -491,6 +474,50 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
             error: (error) => (error instanceof Error ? error.message : 'Gagal memperbarui transaksi'),
           });
           setEditTransaction(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTransaction)}
+        title="Hapus Transaksi"
+        description={`Hapus transaksi ${deleteTransaction?.note || 'tanpa catatan'}? Saldo wallet akan disesuaikan kembali.`}
+        confirmLabel="Hapus"
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTransaction(null);
+          }
+        }}
+        onConfirm={async () => {
+          if (!deleteTransaction) {
+            return;
+          }
+
+          await toast.promise(handleDelete(deleteTransaction.id), {
+            loading: 'Menghapus transaksi...',
+            success: 'Transaksi berhasil dihapus',
+            error: (error) => (error instanceof Error ? error.message : 'Gagal menghapus transaksi'),
+          });
+          setDeleteTransaction(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title="Hapus Transaksi Terpilih"
+        description={`Hapus ${selectedIds.length} transaksi terpilih? Saldo wallet akan disesuaikan kembali.`}
+        confirmLabel="Hapus Semua"
+        onOpenChange={(open) => {
+          if (!open) {
+            setBulkDeleteOpen(false);
+          }
+        }}
+        onConfirm={async () => {
+          await toast.promise(handleBulkDelete(), {
+            loading: 'Menghapus transaksi terpilih...',
+            success: 'Transaksi terpilih berhasil dihapus',
+            error: (error) => (error instanceof Error ? error.message : 'Gagal menghapus transaksi'),
+          });
+          setBulkDeleteOpen(false);
         }}
       />
     </div>

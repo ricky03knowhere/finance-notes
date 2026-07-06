@@ -45,7 +45,7 @@ export function Dialog({ open, onOpenChange, title, description, className, chil
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-            {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+            {/* {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null} */}
           </div>
           <button
             aria-label="Close dialog"

@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Separator } from '@/components/ui/separator';
 import type { CategoryDashboard, CategoryRecord } from '@/features/category/category.types';
 import { CategoryFormDialog, type CategoryFormValues } from '@/app/(dashboard)/categories/_components/category-form-dialog';
@@ -25,6 +26,7 @@ export function CategoryManager({ initialDashboard }: CategoryManagerProps) {
   const [dashboard, setDashboard] = useState(initialDashboard);
   const [createOpen, setCreateOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<CategoryRecord | null>(null);
+  const [deleteCategory, setDeleteCategory] = useState<CategoryRecord | null>(null);
 
   const summaryCards = useMemo(
     () => [
@@ -117,10 +119,6 @@ export function CategoryManager({ initialDashboard }: CategoryManagerProps) {
   }
 
   async function handleDelete(categoryId: string) {
-    if (!window.confirm('Hapus kategori ini? Transaksi yang terkait akan tetap tersimpan tanpa kategori.')) {
-      return;
-    }
-
     const previousDashboard = dashboard;
 
     setDashboard((current) => ({
@@ -236,7 +234,7 @@ export function CategoryManager({ initialDashboard }: CategoryManagerProps) {
                         <Button size="sm" variant="outline" onClick={() => setEditCategory(category)}>
                           Edit
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => void handleDelete(category.id)}>
+                        <Button size="sm" variant="destructive" onClick={() => setDeleteCategory(category)}>
                           <Trash2 className="h-4 w-4" />
                           Delete
                         </Button>
@@ -284,6 +282,26 @@ export function CategoryManager({ initialDashboard }: CategoryManagerProps) {
             error: (error) => (error instanceof Error ? error.message : 'Gagal memperbarui kategori'),
           });
           setEditCategory(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteCategory)}
+        title="Hapus Kategori"
+        description={`Hapus kategori ${deleteCategory?.name ?? ''}? Transaksi yang terkait akan tetap tersimpan tanpa kategori.`}
+        confirmLabel="Hapus"
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteCategory(null);
+          }
+        }}
+        onConfirm={async () => {
+          if (!deleteCategory) {
+            return;
+          }
+
+          await handleDelete(deleteCategory.id);
+          setDeleteCategory(null);
         }}
       />
     </div>

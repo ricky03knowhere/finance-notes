@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/utils';
 import type { WalletDashboard, WalletRecord } from '@/features/wallet/wallet.types';
@@ -36,6 +37,7 @@ export function WalletManager({ initialDashboard }: WalletManagerProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editWallet, setEditWallet] = useState<WalletRecord | null>(null);
   const [transferWallet, setTransferWallet] = useState<WalletRecord | null>(null);
+  const [deleteWallet, setDeleteWallet] = useState<WalletRecord | null>(null);
 
   const summaryCards = useMemo(
     () => [
@@ -141,10 +143,6 @@ export function WalletManager({ initialDashboard }: WalletManagerProps) {
   }
 
   async function handleDelete(walletId: string) {
-    if (!window.confirm('Hapus wallet ini? Semua data transaksi terkait tetap tersimpan.')) {
-      return;
-    }
-
     const previousDashboard = dashboard;
 
     setDashboard((current) => ({
@@ -309,7 +307,7 @@ export function WalletManager({ initialDashboard }: WalletManagerProps) {
                             <ArrowRightLeft className="h-4 w-4" />
                             Transfer
                           </Button>
-                          <Button size="sm" variant="destructive" onClick={() => void handleDelete(wallet.id)}>
+                          <Button size="sm" variant="destructive" onClick={() => setDeleteWallet(wallet)}>
                             <Trash2 className="h-4 w-4" />
                             Delete
                           </Button>
@@ -409,6 +407,26 @@ export function WalletManager({ initialDashboard }: WalletManagerProps) {
             error: (error) => (error instanceof Error ? error.message : 'Gagal transfer wallet'),
           });
           setTransferWallet(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteWallet)}
+        title="Hapus Wallet"
+        description={`Hapus wallet ${deleteWallet?.name ?? ''}? Semua data transaksi terkait tetap tersimpan.`}
+        confirmLabel="Hapus"
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteWallet(null);
+          }
+        }}
+        onConfirm={async () => {
+          if (!deleteWallet) {
+            return;
+          }
+
+          await handleDelete(deleteWallet.id);
+          setDeleteWallet(null);
         }}
       />
     </div>
