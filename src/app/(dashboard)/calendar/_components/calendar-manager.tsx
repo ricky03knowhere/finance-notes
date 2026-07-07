@@ -47,11 +47,9 @@ export function CalendarManager({ initialDashboard }: CalendarManagerProps) {
             <Badge variant="outline" className="w-fit">
               Dashboard / Calendar
             </Badge>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Jadwal transaksi dan tagihan Anda.</h1>
-              <p className="max-w-xl text-sm leading-6 text-muted-foreground md:text-base">
-                Lihat aktivitas keuangan harian dan tagihan mendatang dalam tampilan kalender ringkas.
-              </p>
+            <div className="flex items-center gap-3">
+              <Clock3 className="h-6 w-6 text-primary" />
+              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Calendar</h1>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">

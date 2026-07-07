@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import useSWR from 'swr';
-import { ChartPie, ChevronRight, RefreshCcw, Sparkles } from 'lucide-react';
+import { ChartPie, ChevronRight, LucideGaugeCircle, RefreshCcw, Sparkles } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,9 +76,9 @@ export function DashboardManager({ initialDashboard }: { initialDashboard: Dashb
             <Badge variant="outline" className="w-fit">
               Dashboard
             </Badge>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Ringkasan Keuangan Anda</h1>
-              <p className="max-w-xl text-sm leading-6 text-muted-foreground md:text-base">Ikhtisar cepat: saldo, pemasukan, pengeluaran, dan tren bulanan.</p>
+            <div className="flex items-center gap-3">
+              <LucideGaugeCircle className="h-6 w-6 text-primary" />
+              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Dashboard</h1>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -133,8 +133,6 @@ export function DashboardManager({ initialDashboard }: { initialDashboard: Dashb
 
         <DashboardDetails dashboard={hydratedDashboard} />
       </section>
-
-      <DashboardActivities dashboard={hydratedDashboard} />
 
       <section className="grid gap-4 md:grid-cols-3">
         <Card className="md:col-span-2">

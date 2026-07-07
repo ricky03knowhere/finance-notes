@@ -112,11 +112,9 @@ export function CategoryManager({ initialDashboard }: CategoryManagerProps) {
             <Badge variant="outline" className="w-fit">
               Dashboard / Category
             </Badge>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Kelola kategori income dan expense.</h1>
-              <p className="max-w-xl text-sm leading-6 text-muted-foreground md:text-base">
-                Susun label transaksi yang jelas supaya laporan dan analitik tetap rapi.
-              </p>
+            <div className="flex items-center gap-3">
+              <FolderOpen className="h-6 w-6 text-primary" />
+              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Category</h1>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">

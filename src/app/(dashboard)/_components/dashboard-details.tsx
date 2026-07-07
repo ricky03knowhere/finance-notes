@@ -31,33 +31,6 @@ export default function DashboardDetails({ dashboard }: { dashboard: Dashboard }
           )}
         </CardContent>
       </Card>
-
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Upcoming Bills</CardTitle>
-          <CardDescription>Tagihan terdekat yang perlu diperhatikan.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3">
-          {dashboard.upcomingBills.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-border p-8 text-center">
-              <p className="text-base font-medium">Tidak ada tagihan mendatang</p>
-            </div>
-          ) : (
-            dashboard.upcomingBills.map((bill) => (
-              <div key={bill.id} className="rounded-3xl border border-border bg-background p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{bill.title}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{new Date(bill.dueDate).toLocaleDateString('id-ID')}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-base font-semibold">{formatCurrency(bill.amount)}</p>
-                  <Badge variant={bill.paid ? 'success' : 'danger'}>{bill.paid ? 'Paid' : 'Due'}</Badge>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

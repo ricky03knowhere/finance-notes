@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, ChartPie, Layers, Sparkles } from 'lucide-react';
+import { BarChart3, ChartPie, FileText, Layers, Sparkles } from 'lucide-react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { Badge } from '@/components/ui/badge';
@@ -36,11 +36,9 @@ export function ReportManager({ initialDashboard }: ReportManagerProps) {
             <Badge variant="outline" className="w-fit">
               Dashboard / Reports
             </Badge>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Laporan keuangan Anda dalam sekali tampilan.</h1>
-              <p className="max-w-xl text-sm leading-6 text-muted-foreground md:text-base">
-                Pantau hasil pengeluaran, pendapatan, dan performa budget dengan ringkas.
-              </p>
+            <div className="flex items-center gap-3">
+              <FileText className="h-6 w-6 text-primary" />
+              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Reports</h1>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
