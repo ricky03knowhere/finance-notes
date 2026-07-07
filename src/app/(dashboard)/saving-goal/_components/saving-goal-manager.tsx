@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import useSWR from 'swr';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/utils';
+import { fetcher } from '@/lib/swr';
 import type { SavingGoalDashboard, SavingGoalRecord } from '@/features/saving-goal/saving-goal.types';
 import { SavingGoalFormDialog, type SavingGoalFormValues } from '@/app/(dashboard)/saving-goal/_components/saving-goal-form-dialog';
 
@@ -19,19 +21,17 @@ type SavingGoalManagerProps = {
 };
 
 export function SavingGoalManager({ initialDashboard }: SavingGoalManagerProps) {
-  const [dashboard, setDashboard] = useState(initialDashboard);
+  const { data, mutate } = useSWR<{ dashboard: SavingGoalDashboard }>('/api/saving-goals', fetcher, {
+    fallbackData: { dashboard: initialDashboard },
+    refreshInterval: 30000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+  });
+  const dashboard = data?.dashboard ?? initialDashboard;
   const [createOpen, setCreateOpen] = useState(false);
   const [editGoal, setEditGoal] = useState<SavingGoalRecord | null>(null);
   const [deleteGoal, setDeleteGoal] = useState<SavingGoalRecord | null>(null);
 
-  async function refreshDashboard() {
-    const response = await fetch('/api/saving-goals', { cache: 'no-store' });
-    if (!response.ok) {
-      throw new Error('Gagal memuat saving goal');
-    }
-    const payload = (await response.json()) as { dashboard: SavingGoalDashboard };
-    setDashboard(payload.dashboard);
-  }
 
   async function handleCreate(values: SavingGoalFormValues) {
     const response = await fetch('/api/saving-goals', {
@@ -42,7 +42,7 @@ export function SavingGoalManager({ initialDashboard }: SavingGoalManagerProps) 
     if (!response.ok) {
       throw new Error('Gagal membuat saving goal');
     }
-    await refreshDashboard();
+    await mutate();
   }
 
   async function handleUpdate(goalId: string, values: SavingGoalFormValues) {
@@ -54,7 +54,7 @@ export function SavingGoalManager({ initialDashboard }: SavingGoalManagerProps) 
     if (!response.ok) {
       throw new Error('Gagal memperbarui saving goal');
     }
-    await refreshDashboard();
+    await mutate();
   }
 
   async function handleDelete(goalId: string) {
@@ -64,7 +64,7 @@ export function SavingGoalManager({ initialDashboard }: SavingGoalManagerProps) 
     if (!response.ok) {
       throw new Error('Gagal menghapus saving goal');
     }
-    await refreshDashboard();
+    await mutate();
   }
 
   return (

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CalendarDays, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import useSWR from 'swr';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/utils';
+import { fetcher } from '@/lib/swr';
 import type { BudgetDashboard, BudgetRecord } from '@/features/budget/budget.types';
 import { BudgetFormDialog, type BudgetFormValues } from '@/app/(dashboard)/budget/_components/budget-form-dialog';
 
@@ -21,7 +23,13 @@ type BudgetManagerProps = {
 };
 
 export function BudgetManager({ initialDashboard }: BudgetManagerProps) {
-  const [dashboard, setDashboard] = useState(initialDashboard);
+  const { data, mutate, isLoading } = useSWR<{ dashboard: BudgetDashboard }>('/api/budgets', fetcher, {
+    fallbackData: { dashboard: initialDashboard },
+    refreshInterval: 30000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+  });
+  const dashboard = data?.dashboard ?? initialDashboard;
   const [createOpen, setCreateOpen] = useState(false);
   const [editBudget, setEditBudget] = useState<BudgetRecord | null>(null);
   const [deleteBudget, setDeleteBudget] = useState<BudgetRecord | null>(null);
@@ -37,14 +45,7 @@ export function BudgetManager({ initialDashboard }: BudgetManagerProps) {
   );
 
   async function refreshDashboard() {
-    const response = await fetch('/api/budgets', { cache: 'no-store' });
-
-    if (!response.ok) {
-      throw new Error('Gagal memuat budget');
-    }
-
-    const payload = (await response.json()) as { dashboard: BudgetDashboard };
-    setDashboard(payload.dashboard);
+    await mutate();
   }
 
   async function handleCreate(values: BudgetFormValues) {
@@ -58,7 +59,7 @@ export function BudgetManager({ initialDashboard }: BudgetManagerProps) {
       throw new Error('Gagal membuat budget');
     }
 
-    await refreshDashboard();
+    await mutate();
   }
 
   async function handleUpdate(budgetId: string, values: BudgetFormValues) {
@@ -72,7 +73,7 @@ export function BudgetManager({ initialDashboard }: BudgetManagerProps) {
       throw new Error('Gagal memperbarui budget');
     }
 
-    await refreshDashboard();
+    await mutate();
   }
 
   async function handleDelete(budgetId: string) {
@@ -82,7 +83,7 @@ export function BudgetManager({ initialDashboard }: BudgetManagerProps) {
       throw new Error('Gagal menghapus budget');
     }
 
-    await refreshDashboard();
+    await mutate();
   }
 
   return (

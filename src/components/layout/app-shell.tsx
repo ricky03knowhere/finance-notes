@@ -1,14 +1,15 @@
-'use client';
+"use client";
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Suspense } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { BarChart3, CalendarDays, LayoutDashboard, ReceiptText, Tags, Wallet, PiggyBank, CalendarClock, FileText, TrendingUp } from 'lucide-react';
 import type { Route } from 'next';
 
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { href: '/' as Route, label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard' as Route, label: 'Dashboard', icon: LayoutDashboard },
   { href: '/wallet' as Route, label: 'Wallet', icon: Wallet },
   { href: '/transactions' as Route, label: 'Transaction', icon: ReceiptText },
   { href: '/categories' as Route, label: 'Category', icon: Tags },
@@ -22,10 +23,11 @@ const NAV_ITEMS = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto flex min-h-screen max-w-7xl gap-6 px-4 py-4 md:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-screen gap-6 px-4 py-4 md:px-6 lg:px-8">
         <aside className="hidden w-72 shrink-0 flex-col rounded-3xl border border-border bg-card/90 p-4 shadow-soft backdrop-blur md:flex">
           <div className="mb-8 rounded-2xl bg-primary px-4 py-4 text-primary-foreground shadow-soft">
             <p className="text-sm font-medium uppercase tracking-[0.24em] opacity-80">Finora</p>
@@ -46,6 +48,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                   )}
                   href={item.href}
+                  prefetch={false}
+                  onMouseEnter={() => router.prefetch(item.href)}
                 >
                   <Icon className="h-4 w-4" />
                   {item.label}
@@ -56,7 +60,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <main className="flex-1">{children}</main>
+          <main className="flex-1">
+            <Suspense
+              fallback={
+                <div className="animate-pulse">
+                  <div className="mb-6 h-8 w-48 rounded-lg bg-border" />
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="h-24 rounded-2xl bg-border" />
+                    ))}
+                  </div>
+                  <div className="mt-6 h-64 rounded-2xl bg-border" />
+                </div>
+              }
+            >
+              {children}
+            </Suspense>
+          </main>
         </div>
       </div>
 
@@ -73,6 +93,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground',
               )}
               href={item.href}
+              prefetch={false}
+              onMouseEnter={() => router.prefetch(item.href)}
             >
               <Icon className="h-5 w-5" />
               {item.label}

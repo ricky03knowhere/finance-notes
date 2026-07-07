@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import useSWR from 'swr';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/utils';
+import { fetcher } from '@/lib/swr';
 import type { BillDashboard, BillRecord } from '@/features/bill/bill.types';
 import { BillFormDialog, type BillFormValues } from '@/app/(dashboard)/bills/_components/bill-form-dialog';
 
@@ -19,19 +21,16 @@ type BillManagerProps = {
 };
 
 export function BillManager({ initialDashboard }: BillManagerProps) {
-  const [dashboard, setDashboard] = useState(initialDashboard);
+  const { data, mutate } = useSWR<{ dashboard: BillDashboard }>('/api/bills', fetcher, {
+    fallbackData: { dashboard: initialDashboard },
+    refreshInterval: 30000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+  });
+  const dashboard = data?.dashboard ?? initialDashboard;
   const [createOpen, setCreateOpen] = useState(false);
   const [editBill, setEditBill] = useState<BillRecord | null>(null);
   const [deleteBill, setDeleteBill] = useState<BillRecord | null>(null);
-
-  async function refreshDashboard() {
-    const response = await fetch('/api/bills', { cache: 'no-store' });
-    if (!response.ok) {
-      throw new Error('Gagal memuat tagihan');
-    }
-    const payload = (await response.json()) as { dashboard: BillDashboard };
-    setDashboard(payload.dashboard);
-  }
 
   async function handleCreate(values: BillFormValues) {
     const response = await fetch('/api/bills', {
@@ -42,7 +41,7 @@ export function BillManager({ initialDashboard }: BillManagerProps) {
     if (!response.ok) {
       throw new Error('Gagal membuat tagihan');
     }
-    await refreshDashboard();
+    await mutate();
   }
 
   async function handleUpdate(billId: string, values: BillFormValues) {
@@ -54,7 +53,7 @@ export function BillManager({ initialDashboard }: BillManagerProps) {
     if (!response.ok) {
       throw new Error('Gagal memperbarui tagihan');
     }
-    await refreshDashboard();
+    await mutate();
   }
 
   async function handleDelete(billId: string) {
@@ -62,7 +61,7 @@ export function BillManager({ initialDashboard }: BillManagerProps) {
     if (!response.ok) {
       throw new Error('Gagal menghapus tagihan');
     }
-    await refreshDashboard();
+    await mutate();
   }
 
   return (

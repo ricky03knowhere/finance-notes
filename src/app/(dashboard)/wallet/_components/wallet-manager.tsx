@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRightLeft, Banknote, Plus, Trash2, Wallet as WalletIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import useSWR from 'swr';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/utils';
+import { fetcher } from '@/lib/swr';
 import type { WalletDashboard, WalletRecord } from '@/features/wallet/wallet.types';
 import {
   WalletFormDialog,
@@ -33,7 +35,13 @@ type WalletManagerProps = {
 };
 
 export function WalletManager({ initialDashboard }: WalletManagerProps) {
-  const [dashboard, setDashboard] = useState(initialDashboard);
+  const { data, mutate } = useSWR<{ dashboard: WalletDashboard }>('/api/wallets', fetcher, {
+    fallbackData: { dashboard: initialDashboard },
+    refreshInterval: 30000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+  });
+  const dashboard = data?.dashboard ?? initialDashboard;
   const [createOpen, setCreateOpen] = useState(false);
   const [editWallet, setEditWallet] = useState<WalletRecord | null>(null);
   const [transferWallet, setTransferWallet] = useState<WalletRecord | null>(null);
@@ -49,47 +57,7 @@ export function WalletManager({ initialDashboard }: WalletManagerProps) {
     [dashboard.summary],
   );
 
-  async function refreshDashboard() {
-    const response = await fetch('/api/wallets', {
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      throw new Error('Gagal memuat wallet');
-    }
-
-    const payload = (await response.json()) as { dashboard: WalletDashboard };
-    setDashboard(payload.dashboard);
-  }
-
   async function handleCreate(values: WalletFormValues) {
-    const initialBalance = values.initialBalance ?? 0;
-
-    const optimisticWallet: WalletRecord = {
-      id: crypto.randomUUID(),
-      name: values.name,
-      type: values.type,
-      icon: values.icon,
-      color: values.color,
-      balance: initialBalance,
-      initialBalance,
-      createdAt: new Date().toISOString(),
-    };
-
-    setDashboard((current) => ({
-      ...current,
-      wallets: [optimisticWallet, ...current.wallets],
-      summary: {
-        ...current.summary,
-        totalBalance: current.summary.totalBalance + initialBalance,
-        walletCount: current.summary.walletCount + 1,
-        cashBalance: values.type === 'CASH' ? current.summary.cashBalance + initialBalance : current.summary.cashBalance,
-        bankBalance: values.type === 'BANK' ? current.summary.bankBalance + initialBalance : current.summary.bankBalance,
-        eWalletBalance: values.type === 'E_WALLET' ? current.summary.eWalletBalance + initialBalance : current.summary.eWalletBalance,
-        creditCardBalance: values.type === 'CREDIT_CARD' ? current.summary.creditCardBalance + initialBalance : current.summary.creditCardBalance,
-      },
-    }));
-
     const response = await fetch('/api/wallets', {
       method: 'POST',
       headers: {
@@ -99,32 +67,14 @@ export function WalletManager({ initialDashboard }: WalletManagerProps) {
     });
 
     if (!response.ok) {
-      await refreshDashboard();
-      throw new Error('Gagal membuat wallet');
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(payload?.error ?? 'Gagal membuat wallet');
     }
 
-    const payload = (await response.json()) as { dashboard: WalletDashboard };
-    setDashboard(payload.dashboard);
+    await mutate();
   }
 
   async function handleUpdate(walletId: string, values: WalletFormValues) {
-    const previousDashboard = dashboard;
-
-    setDashboard((current) => ({
-      ...current,
-      wallets: current.wallets.map((wallet) =>
-        wallet.id === walletId
-          ? {
-              ...wallet,
-              name: values.name,
-              type: values.type,
-              icon: values.icon,
-              color: values.color,
-            }
-          : wallet,
-      ),
-    }));
-
     const response = await fetch(`/api/wallets/${walletId}`, {
       method: 'PATCH',
       headers: {
@@ -134,57 +84,27 @@ export function WalletManager({ initialDashboard }: WalletManagerProps) {
     });
 
     if (!response.ok) {
-      setDashboard(previousDashboard);
-      throw new Error('Gagal memperbarui wallet');
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(payload?.error ?? 'Gagal memperbarui wallet');
     }
 
-    const payload = (await response.json()) as { dashboard: WalletDashboard };
-    setDashboard(payload.dashboard);
+    await mutate();
   }
 
   async function handleDelete(walletId: string) {
-    const previousDashboard = dashboard;
-
-    setDashboard((current) => ({
-      ...current,
-      wallets: current.wallets.filter((wallet) => wallet.id !== walletId),
-      summary: {
-        ...current.summary,
-        walletCount: Math.max(current.summary.walletCount - 1, 0),
-      },
-    }));
-
     const response = await fetch(`/api/wallets/${walletId}`, {
       method: 'DELETE',
     });
 
     if (!response.ok) {
-      setDashboard(previousDashboard);
-      throw new Error('Gagal menghapus wallet');
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(payload?.error ?? 'Gagal menghapus wallet');
     }
 
-    const payload = (await response.json()) as { dashboard: WalletDashboard };
-    setDashboard(payload.dashboard);
+    await mutate();
   }
 
   async function handleTransfer(values: WalletTransferValues) {
-    const previousDashboard = dashboard;
-
-    setDashboard((current) => ({
-      ...current,
-      wallets: current.wallets.map((wallet) => {
-        if (wallet.id === values.sourceWalletId) {
-          return { ...wallet, balance: wallet.balance - values.amount };
-        }
-
-        if (wallet.id === values.destinationWalletId) {
-          return { ...wallet, balance: wallet.balance + values.amount };
-        }
-
-        return wallet;
-      }),
-    }));
-
     const response = await fetch(`/api/wallets/${values.sourceWalletId}/transfer`, {
       method: 'POST',
       headers: {
@@ -198,12 +118,11 @@ export function WalletManager({ initialDashboard }: WalletManagerProps) {
     });
 
     if (!response.ok) {
-      setDashboard(previousDashboard);
-      throw new Error('Gagal melakukan transfer');
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(payload?.error ?? 'Gagal melakukan transfer');
     }
 
-    const payload = (await response.json()) as { dashboard: WalletDashboard };
-    setDashboard(payload.dashboard);
+    await mutate();
   }
 
   return (

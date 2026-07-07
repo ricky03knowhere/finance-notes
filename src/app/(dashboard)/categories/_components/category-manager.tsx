@@ -4,12 +4,14 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FolderOpen, Plus, Trash2, Shapes } from 'lucide-react';
 import { toast } from 'sonner';
+import useSWR from 'swr';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Separator } from '@/components/ui/separator';
+import { fetcher } from '@/lib/swr';
 import type { CategoryDashboard, CategoryRecord } from '@/features/category/category.types';
 import { CategoryFormDialog, type CategoryFormValues } from '@/app/(dashboard)/categories/_components/category-form-dialog';
 
@@ -23,7 +25,13 @@ type CategoryManagerProps = {
 };
 
 export function CategoryManager({ initialDashboard }: CategoryManagerProps) {
-  const [dashboard, setDashboard] = useState(initialDashboard);
+  const { data, mutate } = useSWR<{ dashboard: CategoryDashboard }>('/api/categories', fetcher, {
+    fallbackData: { dashboard: initialDashboard },
+    refreshInterval: 30000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+  });
+  const dashboard = data?.dashboard ?? initialDashboard;
   const [createOpen, setCreateOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<CategoryRecord | null>(null);
   const [deleteCategory, setDeleteCategory] = useState<CategoryRecord | null>(null);
@@ -37,19 +45,6 @@ export function CategoryManager({ initialDashboard }: CategoryManagerProps) {
     [dashboard.summary],
   );
 
-  async function refreshDashboard() {
-    const response = await fetch('/api/categories', {
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      throw new Error('Gagal memuat kategori');
-    }
-
-    const payload = (await response.json()) as { dashboard: CategoryDashboard };
-    setDashboard(payload.dashboard);
-  }
-
   async function handleCreate(values: CategoryFormValues) {
     const optimisticCategory: CategoryRecord = {
       id: crypto.randomUUID(),
@@ -60,49 +55,25 @@ export function CategoryManager({ initialDashboard }: CategoryManagerProps) {
       transactionCount: 0,
     };
 
-    setDashboard((current) => ({
-      ...current,
-      categories: [optimisticCategory, ...current.categories],
-      summary: {
-        totalCategories: current.summary.totalCategories + 1,
-        incomeCategories: current.summary.incomeCategories + (values.type === 'INCOME' ? 1 : 0),
-        expenseCategories: current.summary.expenseCategories + (values.type === 'EXPENSE' ? 1 : 0),
+    await mutate(
+      async () => {
+        const response = await fetch('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(values),
+        });
+
+        if (!response.ok) {
+          throw new Error('Gagal membuat kategori');
+        }
+
+        return response.json();
       },
-    }));
-
-    const response = await fetch('/api/categories', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    });
-
-    if (!response.ok) {
-      await refreshDashboard();
-      throw new Error('Gagal membuat kategori');
-    }
-
-    const payload = (await response.json()) as { dashboard: CategoryDashboard };
-    setDashboard(payload.dashboard);
+      { optimisticData: { dashboard: { ...dashboard, categories: [optimisticCategory, ...dashboard.categories], summary: { ...dashboard.summary, totalCategories: dashboard.summary.totalCategories + 1, incomeCategories: dashboard.summary.incomeCategories + (values.type === 'INCOME' ? 1 : 0), expenseCategories: dashboard.summary.expenseCategories + (values.type === 'EXPENSE' ? 1 : 0), }, }, }, revalidate: true },
+    );
   }
 
   async function handleUpdate(categoryId: string, values: CategoryFormValues) {
-    const previousDashboard = dashboard;
-
-    setDashboard((current) => ({
-      ...current,
-      categories: current.categories.map((category) =>
-        category.id === categoryId
-          ? {
-              ...category,
-              name: values.name,
-              type: values.type,
-              color: values.color,
-              icon: values.icon,
-            }
-          : category,
-      ),
-    }));
-
     const response = await fetch(`/api/categories/${categoryId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -110,37 +81,27 @@ export function CategoryManager({ initialDashboard }: CategoryManagerProps) {
     });
 
     if (!response.ok) {
-      setDashboard(previousDashboard);
       throw new Error('Gagal memperbarui kategori');
     }
 
-    const payload = (await response.json()) as { dashboard: CategoryDashboard };
-    setDashboard(payload.dashboard);
+    await mutate();
   }
 
   async function handleDelete(categoryId: string) {
-    const previousDashboard = dashboard;
+    await mutate(
+      async () => {
+        const response = await fetch(`/api/categories/${categoryId}`, {
+          method: 'DELETE',
+        });
 
-    setDashboard((current) => ({
-      ...current,
-      categories: current.categories.filter((category) => category.id !== categoryId),
-      summary: {
-        ...current.summary,
-        totalCategories: Math.max(current.summary.totalCategories - 1, 0),
+        if (!response.ok) {
+          throw new Error('Gagal menghapus kategori');
+        }
+
+        return response.json();
       },
-    }));
-
-    const response = await fetch(`/api/categories/${categoryId}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      setDashboard(previousDashboard);
-      throw new Error('Gagal menghapus kategori');
-    }
-
-    const payload = (await response.json()) as { dashboard: CategoryDashboard };
-    setDashboard(payload.dashboard);
+      { optimisticData: { dashboard: { ...dashboard, categories: dashboard.categories.filter((category) => category.id !== categoryId), summary: { ...dashboard.summary, totalCategories: Math.max(dashboard.summary.totalCategories - 1, 0), }, }, }, revalidate: true },
+    );
   }
 
   return (

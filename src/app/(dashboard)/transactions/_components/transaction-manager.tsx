@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowDownLeft, ArrowRightLeft, ArrowUpRight, CopyPlus, Filter, Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import useSWR from 'swr';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
+import { fetcher } from '@/lib/swr';
 import type { TransactionDashboard, TransactionRecord, TransactionType } from '@/features/transaction/transaction.types';
 import { TransactionFormDialog, type TransactionFormValues } from '@/app/(dashboard)/transactions/_components/transaction-form-dialog';
 
@@ -40,7 +42,6 @@ type TransactionManagerProps = {
 };
 
 export function TransactionManager({ initialDashboard }: TransactionManagerProps) {
-  const [dashboard, setDashboard] = useState(initialDashboard);
   const [filters, setFilters] = useState(initialDashboard.filters);
   const [searchInput, setSearchInput] = useState(initialDashboard.filters.search);
   const [createOpen, setCreateOpen] = useState(false);
@@ -48,6 +49,26 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleteTransaction, setDeleteTransaction] = useState<TransactionRecord | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+
+  const queryKey = `/api/transactions?${new URLSearchParams({
+    search: filters.search,
+    type: filters.type,
+    walletId: filters.walletId,
+    categoryId: filters.categoryId,
+    page: String(filters.page),
+    pageSize: String(filters.pageSize),
+    sortBy: filters.sortBy,
+    sortDirection: filters.sortDirection,
+  }).toString()}`;
+
+  const { data, mutate } = useSWR<{ dashboard: TransactionDashboard }>(queryKey, fetcher, {
+    fallbackData: { dashboard: initialDashboard },
+    refreshInterval: 30000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+  });
+
+  const dashboard = data?.dashboard ?? initialDashboard;
 
   const summaryCards = useMemo(
     () => [
@@ -63,26 +84,8 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
     setFilters((current) => ({ ...current, ...next }));
   }
 
-  async function loadDashboard(nextFilters = filters) {
-    const params = new URLSearchParams({
-      search: nextFilters.search,
-      type: nextFilters.type,
-      walletId: nextFilters.walletId,
-      categoryId: nextFilters.categoryId,
-      page: String(nextFilters.page),
-      pageSize: String(nextFilters.pageSize),
-      sortBy: nextFilters.sortBy,
-      sortDirection: nextFilters.sortDirection,
-    });
-
-    const response = await fetch(`/api/transactions?${params.toString()}`, { cache: 'no-store' });
-
-    if (!response.ok) {
-      throw new Error('Gagal memuat transaksi');
-    }
-
-    const payload = (await response.json()) as { dashboard: TransactionDashboard };
-    setDashboard(payload.dashboard);
+  async function loadDashboard() {
+    await mutate();
     setSelectedIds([]);
   }
 
@@ -95,10 +98,10 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
   }, [searchInput]);
 
   useEffect(() => {
-    void loadDashboard(filters).catch((error: unknown) => {
+    void loadDashboard().catch((error: unknown) => {
       toast.error(error instanceof Error ? error.message : 'Gagal memuat transaksi');
     });
-  }, [filters]);
+  }, [queryKey]);
 
   async function handleCreate(values: TransactionFormValues) {
     const response = await fetch('/api/transactions', {
@@ -112,7 +115,7 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
       throw new Error(payload?.error ?? 'Gagal membuat transaksi');
     }
 
-    await loadDashboard(filters);
+    await mutate();
   }
 
   async function handleUpdate(transactionId: string, values: TransactionFormValues) {
@@ -126,7 +129,7 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
       throw new Error('Gagal memperbarui transaksi');
     }
 
-    await loadDashboard(filters);
+    await mutate();
   }
 
   async function handleDelete(transactionId: string) {
@@ -136,7 +139,7 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
       throw new Error('Gagal menghapus transaksi');
     }
 
-    await loadDashboard(filters);
+    await mutate();
   }
 
   async function handleDuplicate(transactionId: string) {
@@ -146,7 +149,7 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
       throw new Error('Gagal menggandakan transaksi');
     }
 
-    await loadDashboard(filters);
+    await mutate();
   }
 
   async function handleBulkDelete() {
@@ -160,7 +163,7 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
       throw new Error('Gagal menghapus transaksi');
     }
 
-    await loadDashboard(filters);
+    await mutate();
   }
 
   const allVisibleSelected = dashboard.transactions.length > 0 && dashboard.transactions.every((transaction) => selectedIds.includes(transaction.id));
