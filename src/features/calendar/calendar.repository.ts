@@ -69,8 +69,8 @@ function buildDailySummaries(transactions: Array<{ amount: { toString(): string 
 }
 
 const MONTH_LABELS = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ] as const;
 
 function buildYearlyRecapMonths(

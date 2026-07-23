@@ -40,6 +40,7 @@ type TransactionFormDialogProps = {
   onBatchCreate?: (
     rows: ScannedRow[],
     config: { walletId: string; transactionDate: string },
+    onProgress: (completed: number) => void,
   ) => Promise<{ success: number; failed: number }>;
 };
 

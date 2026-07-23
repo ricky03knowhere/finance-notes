@@ -170,6 +170,7 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
   async function handleBatchCreate(
     rows: ScannedRow[],
     config: { walletId: string; transactionDate: string },
+    onProgress: (completed: number) => void,
   ): Promise<{ success: number; failed: number }> {
     let success = 0;
     let failed = 0;
@@ -201,6 +202,8 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
       } catch {
         failed++;
       }
+
+      onProgress(success + failed);
     }
 
     await mutate();

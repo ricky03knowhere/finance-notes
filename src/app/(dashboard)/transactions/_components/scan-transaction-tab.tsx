@@ -22,6 +22,7 @@ type ScanTransactionTabProps = {
   onBatchSubmit: (
     rows: ScannedRow[],
     config: { walletId: string; transactionDate: string },
+    onProgress: (completed: number) => void,
   ) => Promise<{ success: number; failed: number }>;
   onClose: () => void;
   onBusyChange?: (busy: boolean) => void;
@@ -202,7 +203,9 @@ export function ScanTransactionTab({ wallets, categories, onBatchSubmit, onClose
     setSubmitProgress(0);
     onBusyChange?.(true);
 
-    const result = await onBatchSubmit(rows, { walletId, transactionDate });
+    const result = await onBatchSubmit(rows, { walletId, transactionDate }, (completed) => {
+      setSubmitProgress(completed);
+    });
 
     setSubmitProgress(rows.length);
     setSubmitResult(result);

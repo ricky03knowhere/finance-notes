@@ -148,12 +148,24 @@ export async function POST(request: Request) {
     const rawText: string =
       geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
+    if (!rawText.trim()) {
+      return NextResponse.json(
+        { error: '[Gemini API Response Error] Gemini API berhasil dipanggil tetapi tidak mengembalikan hasil teks dari gambar.' },
+        { status: 422 },
+      );
+    }
+
     // Extract JSON content
     const jsonMatch = rawText.match(/\[[\s\S]*\]/) || rawText.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {
+      console.error('Gemini Raw Output (no JSON match):', rawText);
+      const snippet = rawText.length > 120 ? `${rawText.slice(0, 120)}...` : rawText;
       return NextResponse.json(
-        { error: 'Tidak dapat menemukan data tabel dari gambar. Coba gunakan gambar yang lebih jelas.' },
+        {
+          error: `[Parsing Error] Gemini tidak menghasilkan format JSON. Teks yang diterima: "${snippet}"`,
+          rawOutput: rawText,
+        },
         { status: 422 },
       );
     }
@@ -183,33 +195,67 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!Array.isArray(parsed) || parsed.length === 0) {
+    // Handle object with a "rows" or "transactions" property
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      const obj = parsed as Record<string, unknown>;
+      if (Array.isArray(obj.rows)) {
+        parsed = obj.rows;
+      } else if (Array.isArray(obj.transactions)) {
+        parsed = obj.transactions;
+      } else if (Array.isArray(obj.data)) {
+        parsed = obj.data;
+      }
+    }
+
+    if (!parsed || (!Array.isArray(parsed) && typeof parsed !== 'object')) {
+      const snippet = cleanJson.length > 120 ? `${cleanJson.slice(0, 120)}...` : cleanJson;
       return NextResponse.json(
-        { error: 'Format hasil scan tidak valid atau tidak menemukan transaksi' },
+        {
+          error: `[Parsing Error] Gagal memproses struktur JSON dari hasil scan. Teks: "${snippet}"`,
+          rawOutput: rawText,
+        },
         { status: 422 },
       );
     }
 
-    const rows: ScannedRow[] = parsed
+    const rawArray = Array.isArray(parsed) ? parsed : [parsed];
+
+    const rows: ScannedRow[] = rawArray
       .filter(
-        (row: unknown): row is { type: string; amount: number; note: string } =>
+        (row: unknown): row is { type?: string; amount?: number | string; note?: string } =>
           typeof row === 'object' &&
           row !== null &&
-          'type' in row &&
-          'amount' in row,
+          ('amount' in row || 'type' in row || 'note' in row),
       )
-      .map((row) => ({
-        type: row.type === 'INCOME' ? ('INCOME' as const) : ('EXPENSE' as const),
-        amount: Math.abs(Number(row.amount)),
-        note: typeof row.note === 'string' ? row.note : '',
-      }))
+      .map((row) => {
+        const typeStr = String(row.type || 'EXPENSE').toUpperCase();
+        const type = typeStr.includes('INC') || typeStr.includes('MASUK') ? ('INCOME' as const) : ('EXPENSE' as const);
+        const amountNum = Math.abs(Number(String(row.amount || '0').replace(/[^0-9.]/g, '')));
+
+        return {
+          type,
+          amount: isNaN(amountNum) ? 0 : amountNum,
+          note: typeof row.note === 'string' ? row.note : String(row.note ?? ''),
+        };
+      })
       .filter((row) => row.amount > 0);
+
+    if (rows.length === 0) {
+      const snippet = rawText.length > 120 ? `${rawText.slice(0, 120)}...` : rawText;
+      return NextResponse.json(
+        {
+          error: `[Data Extraction Error] Tidak ada baris transaksi valid yang ditemukan pada gambar. Output mentah Gemini: "${snippet}"`,
+          rawOutput: rawText,
+        },
+        { status: 422 },
+      );
+    }
 
     return NextResponse.json({ rows });
   } catch (error) {
     console.error('Scan transaction error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Gagal memindai gambar' },
+      { error: error instanceof Error ? `[System Error] ${error.message}` : '[System Error] Gagal memindai gambar' },
       { status: 500 },
     );
   }
