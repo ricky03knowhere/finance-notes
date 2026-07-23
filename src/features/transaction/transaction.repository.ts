@@ -278,6 +278,7 @@ export interface TransactionRepository {
   listTransactions(userId: string, query: TransactionQueryInput): Promise<Pick<TransactionDashboard, 'summary' | 'transactions' | 'pagination' | 'filters'>>;
   listWalletOptions(userId: string): Promise<TransactionOption[]>;
   listCategoryOptions(userId: string): Promise<TransactionOption[]>;
+  getTransaction(userId: string, transactionId: string): Promise<TransactionRecord>;
   createTransaction(userId: string, input: TransactionMutationInput): Promise<TransactionRecord>;
   updateTransaction(userId: string, transactionId: string, input: TransactionMutationInput): Promise<TransactionRecord>;
   deleteTransaction(userId: string, transactionId: string): Promise<void>;
@@ -331,6 +332,11 @@ export class PrismaTransactionRepository implements TransactionRepository {
     return listCategoryOptions(userId);
   }
 
+  async getTransaction(userId: string, transactionId: string) {
+    const transaction = await loadTransaction(prisma, userId, transactionId);
+    return toRecord(transaction);
+  }
+
   async createTransaction(userId: string, input: TransactionMutationInput) {
     const normalizedInput = {
       ...input,
@@ -362,7 +368,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
       await syncTags(tx, transaction.id, normalizedInput.tags);
 
       return loadTransaction(tx, userId, transaction.id).then(toRecord);
-    });
+    }, { maxWait: 10000, timeout: 30000 });
   }
 
   async updateTransaction(userId: string, transactionId: string, input: TransactionMutationInput) {
@@ -400,7 +406,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
       await syncTags(tx, transactionId, normalizedInput.tags);
 
       return loadTransaction(tx, userId, transactionId).then(toRecord);
-    });
+    }, { maxWait: 10000, timeout: 30000 });
   }
 
   async deleteTransaction(userId: string, transactionId: string) {
@@ -409,7 +415,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
       await reverseEffect(tx, userId, existing as unknown as TransactionRow);
       await tx.transactionTag.deleteMany({ where: { transactionId } });
       await tx.transaction.delete({ where: { id: transactionId } });
-    });
+    }, { maxWait: 10000, timeout: 30000 });
   }
 
   async duplicateTransaction(userId: string, transactionId: string) {
@@ -447,7 +453,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
       await syncTags(tx, transaction.id, parseTags(clonedInput.tagsInput));
 
       return loadTransaction(tx, userId, transaction.id).then(toRecord);
-    });
+    }, { maxWait: 10000, timeout: 30000 });
   }
 
   async bulkDeleteTransactions(userId: string, input: TransactionBulkDeleteInput) {
@@ -462,6 +468,6 @@ export class PrismaTransactionRepository implements TransactionRepository {
       const result = await tx.transaction.deleteMany({ where: { id: { in: input.ids } } });
 
       return result.count;
-    });
+    }, { maxWait: 10000, timeout: 30000 });
   }
 }

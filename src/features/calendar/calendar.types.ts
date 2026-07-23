@@ -36,3 +36,23 @@ export interface CalendarDashboard {
   weeklySummary: CalendarCountItem[];
   monthlyTransactions: CalendarCountItem[];
 }
+
+export interface YearlyRecapItem {
+  amount: number;
+  note: string;
+}
+
+export interface YearlyRecapMonth {
+  month: number;
+  monthLabel: string;
+  income: number;
+  totalSpend: number;
+  left: number;
+  items: YearlyRecapItem[];
+}
+
+export interface YearlyRecap {
+  year: number;
+  months: YearlyRecapMonth[];
+  availableYears: number[];
+}

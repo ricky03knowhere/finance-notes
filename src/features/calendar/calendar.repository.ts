@@ -3,7 +3,7 @@ import 'server-only';
 import dayjs from 'dayjs';
 
 import { prisma } from '@/lib/prisma';
-import type { CalendarDashboard, CalendarDaySummary, CalendarEvent } from '@/features/calendar/calendar.types';
+import type { CalendarDashboard, CalendarDaySummary, CalendarEvent, YearlyRecap, YearlyRecapItem, YearlyRecapMonth } from '@/features/calendar/calendar.types';
 
 function createEventFromTransaction(transaction: {
   id: string;
@@ -68,8 +68,53 @@ function buildDailySummaries(transactions: Array<{ amount: { toString(): string 
   return Array.from(summaryMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 }
 
+const MONTH_LABELS = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+] as const;
+
+function buildYearlyRecapMonths(
+  transactions: Array<{ amount: { toString(): string }; transactionDate: Date; type: 'INCOME' | 'EXPENSE' | 'TRANSFER'; note: string | null }>,
+): YearlyRecapMonth[] {
+  const monthMap = new Map<number, { income: number; items: YearlyRecapItem[] }>();
+
+  for (const tx of transactions) {
+    const month = dayjs(tx.transactionDate).month(); // 0-indexed
+    const entry = monthMap.get(month) ?? { income: 0, items: [] };
+
+    if (tx.type === 'INCOME') {
+      entry.income += Number(tx.amount);
+    } else if (tx.type === 'EXPENSE') {
+      entry.items.push({
+        amount: Number(tx.amount),
+        note: tx.note ?? '',
+      });
+    }
+
+    monthMap.set(month, entry);
+  }
+
+  const months: YearlyRecapMonth[] = [];
+
+  for (const [month, data] of monthMap) {
+    const totalSpend = data.items.reduce((sum, item) => sum + item.amount, 0);
+
+    months.push({
+      month: month + 1, // 1-indexed for display
+      monthLabel: MONTH_LABELS[month],
+      income: data.income,
+      totalSpend,
+      left: data.income - totalSpend,
+      items: data.items,
+    });
+  }
+
+  return months.sort((a, b) => a.month - b.month);
+}
+
 export interface CalendarRepository {
   getDashboard(userId: string): Promise<CalendarDashboard>;
+  getYearlyRecap(userId: string, year: number): Promise<YearlyRecap>;
 }
 
 export class PrismaCalendarRepository implements CalendarRepository {
@@ -168,4 +213,54 @@ export class PrismaCalendarRepository implements CalendarRepository {
       monthlyTransactions: transactionCountByType,
     };
   }
+
+  async getYearlyRecap(userId: string, year: number): Promise<YearlyRecap> {
+    const yearStart = dayjs().year(year).startOf('year').toDate();
+    const yearEnd = dayjs().year(year).endOf('year').toDate();
+
+    const [transactions, yearRows] = await Promise.all([
+      prisma.transaction.findMany({
+        where: {
+          wallet: { userId },
+          transactionDate: {
+            gte: yearStart,
+            lte: yearEnd,
+          },
+          type: { in: ['INCOME', 'EXPENSE'] },
+        },
+        select: {
+          amount: true,
+          transactionDate: true,
+          type: true,
+          note: true,
+        },
+        orderBy: { transactionDate: 'asc' },
+      }),
+      prisma.transaction.findMany({
+        where: { wallet: { userId } },
+        select: { transactionDate: true },
+        distinct: ['transactionDate'],
+        orderBy: { transactionDate: 'asc' },
+      }),
+    ]);
+
+    const availableYearsSet = new Set<number>();
+    for (const row of yearRows) {
+      availableYearsSet.add(dayjs(row.transactionDate).year());
+    }
+
+    const availableYears = Array.from(availableYearsSet).sort((a, b) => b - a);
+
+    if (!availableYears.includes(year)) {
+      availableYears.unshift(year);
+      availableYears.sort((a, b) => b - a);
+    }
+
+    return {
+      year,
+      months: buildYearlyRecapMonths(transactions),
+      availableYears,
+    };
+  }
 }
+

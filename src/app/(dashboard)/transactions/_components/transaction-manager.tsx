@@ -17,6 +17,7 @@ import { formatCurrency } from '@/lib/utils';
 import { fetcher } from '@/lib/swr';
 import type { TransactionDashboard, TransactionRecord, TransactionType } from '@/features/transaction/transaction.types';
 import { TransactionFormDialog, type TransactionFormValues } from '@/app/(dashboard)/transactions/_components/transaction-form-dialog';
+import type { ScannedRow } from '@/app/(dashboard)/transactions/_components/scan-transaction-tab';
 
 const typeLabel: Record<TransactionType, string> = {
   INCOME: 'Income',
@@ -164,6 +165,55 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
     }
 
     await mutate();
+  }
+
+  async function handleBatchCreate(
+    rows: ScannedRow[],
+    config: { walletId: string; transactionDate: string },
+  ): Promise<{ success: number; failed: number }> {
+    let success = 0;
+    let failed = 0;
+
+    for (const row of rows) {
+      try {
+        const response = await fetch('/api/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            walletId: config.walletId,
+            categoryId: row.categoryId,
+            type: row.type,
+            amount: row.amount,
+            note: row.note,
+            transactionDate: config.transactionDate,
+            destinationWalletId: '',
+            attachment: '',
+            location: '',
+            tagsInput: '',
+          }),
+        });
+
+        if (response.ok) {
+          success++;
+        } else {
+          failed++;
+        }
+      } catch {
+        failed++;
+      }
+    }
+
+    await mutate();
+
+    if (success > 0) {
+      toast.success(`${success} transaksi berhasil dibuat dari scan gambar`);
+    }
+
+    if (failed > 0) {
+      toast.error(`${failed} transaksi gagal dibuat`);
+    }
+
+    return { success, failed };
   }
 
   const allVisibleSelected = dashboard.transactions.length > 0 && dashboard.transactions.every((transaction) => selectedIds.includes(transaction.id));
@@ -451,6 +501,7 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
           });
           setCreateOpen(false);
         }}
+        onBatchCreate={handleBatchCreate}
       />
 
       <TransactionFormDialog

@@ -47,6 +47,10 @@ export class TransactionService {
     };
   }
 
+  async getTransaction(userId: string, transactionId: string) {
+    return transactionRepository.getTransaction(userId, transactionId);
+  }
+
   async createTransaction(userId: string, input: TransactionMutationInput) {
     const parsed = transactionMutationSchema.parse(input);
     return transactionRepository.createTransaction(userId, parsed);
