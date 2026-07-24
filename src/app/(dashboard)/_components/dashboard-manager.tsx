@@ -31,24 +31,12 @@ const DashboardDetails = dynamic(() => import('@/app/(dashboard)/_components/das
   ),
 });
 
-const DashboardActivities = dynamic(() => import('@/app/(dashboard)/_components/dashboard-activities'), {
-  ssr: false,
-  loading: () => (
-    <div className="rounded-3xl border border-dashed border-border p-8 text-center">
-      <p className="text-base font-medium">Memuat aktivitas…</p>
-    </div>
-  ),
-});
-
 export function DashboardManager({ initialDashboard }: { initialDashboard: Dashboard }) {
   const setDashboard = useDashboardStore((s) => s.setDashboard);
   const cached = useDashboardStore((s) => s.dashboard);
 
   const { data, mutate, isLoading } = useSWR<{ dashboard: Dashboard }>('/api/dashboard', fetcher, {
     fallbackData: { dashboard: initialDashboard },
-    refreshInterval: 30000,
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
   });
 
   const dashboard = data?.dashboard ?? initialDashboard;

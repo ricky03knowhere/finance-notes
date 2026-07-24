@@ -64,9 +64,6 @@ export function TransactionManager({ initialDashboard }: TransactionManagerProps
 
   const { data, mutate } = useSWR<{ dashboard: TransactionDashboard }>(queryKey, fetcher, {
     fallbackData: { dashboard: initialDashboard },
-    refreshInterval: 30000,
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
   });
 
   const dashboard = data?.dashboard ?? initialDashboard;

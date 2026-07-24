@@ -34,7 +34,7 @@ export function Dialog({ open, onOpenChange, title, description, className, chil
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 mt-0">
       <button
         aria-label="Close dialog backdrop"
         className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"

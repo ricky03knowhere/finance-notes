@@ -63,8 +63,6 @@ export function ScanTransactionTab({ wallets, categories, onBatchSubmit, onClose
   const [walletId, setWalletId] = useState(wallets[0]?.id ?? '');
   const [transactionDate, setTransactionDate] = useState(toLocalDateTimeValue());
 
-  const isBusy = scanState === 'scanning' || scanState === 'submitting';
-
   // Categories filtered by type for each row
   const incomeCategories = useMemo(
     () => categories.filter((c) => c.type === 'INCOME'),

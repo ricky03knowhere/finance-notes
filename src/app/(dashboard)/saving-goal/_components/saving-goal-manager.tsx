@@ -23,9 +23,6 @@ type SavingGoalManagerProps = {
 export function SavingGoalManager({ initialDashboard }: SavingGoalManagerProps) {
   const { data, mutate } = useSWR<{ dashboard: SavingGoalDashboard }>('/api/saving-goals', fetcher, {
     fallbackData: { dashboard: initialDashboard },
-    refreshInterval: 30000,
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
   });
   const dashboard = data?.dashboard ?? initialDashboard;
   const [createOpen, setCreateOpen] = useState(false);

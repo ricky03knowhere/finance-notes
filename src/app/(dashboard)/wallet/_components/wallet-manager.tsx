@@ -37,9 +37,6 @@ type WalletManagerProps = {
 export function WalletManager({ initialDashboard }: WalletManagerProps) {
   const { data, mutate } = useSWR<{ dashboard: WalletDashboard }>('/api/wallets', fetcher, {
     fallbackData: { dashboard: initialDashboard },
-    refreshInterval: 30000,
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
   });
   const dashboard = data?.dashboard ?? initialDashboard;
   const [createOpen, setCreateOpen] = useState(false);

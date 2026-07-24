@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { BarChart3, CalendarDays, LayoutDashboard, ReceiptText, Tags, Wallet, PiggyBank, CalendarClock, FileText, TrendingUp } from 'lucide-react';
 import type { Route } from 'next';
 
@@ -23,7 +23,6 @@ const NAV_ITEMS = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,8 +47,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                   )}
                   href={item.href}
-                  prefetch={false}
-                  onMouseEnter={() => router.prefetch(item.href)}
                 >
                   <Icon className="h-4 w-4" />
                   {item.label}
@@ -93,8 +90,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground',
               )}
               href={item.href}
-              prefetch={false}
-              onMouseEnter={() => router.prefetch(item.href)}
             >
               <Icon className="h-5 w-5" />
               {item.label}

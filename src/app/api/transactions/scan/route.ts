@@ -51,8 +51,31 @@ export async function POST(request: Request) {
     const base64 = Buffer.from(bytes).toString('base64');
     const mimeType = file.type || 'image/png';
 
-    // Dynamically discover supported models for this API key via ListModels
-    let candidateModels: string[] = [];
+    const PREFERRED_MODELS = [
+      'gemini-flash-latest',
+      'gemini-3.6-flash',
+      'gemini-flash-lite-latest',
+      'gemini-3.5-flash',
+      'gemini-3-flash-preview',
+      'gemini-3.1-flash-lite',
+      'gemini-2.0-flash',
+      'gemini-2.5-flash',
+    ];
+
+    const IGNORED_KEYWORDS = [
+      'tts',
+      'embedding',
+      'imagen',
+      'veo',
+      'aqa',
+      'lyria',
+      'gemma',
+      'computer-use',
+      'deep-research',
+      'robotics',
+    ];
+
+    let discoveredModels: string[] = [];
 
     try {
       const listModelsRes = await fetch(
@@ -63,27 +86,19 @@ export async function POST(request: Request) {
         const availableModels: Array<{ name: string; supportedGenerationMethods?: string[] }> =
           listData?.models ?? [];
 
-        candidateModels = availableModels
+        discoveredModels = availableModels
           .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
-          .map((m) => m.name.replace(/^models\//, ''));
+          .map((m) => m.name.replace(/^models\//, ''))
+          .filter((name) => !IGNORED_KEYWORDS.some((kw) => name.includes(kw)));
       }
     } catch {
-      // Ignore list error and fallback to default candidate list
+      // Ignore list error
     }
 
-    // Default fallbacks if ListModels didn't yield models
-    if (candidateModels.length === 0) {
-      candidateModels = [
-        'gemini-1.5-flash-latest',
-        'gemini-1.5-flash',
-        'gemini-2.0-flash-exp',
-        'gemini-2.0-flash',
-        'gemini-1.5-flash-001',
-        'gemini-1.5-flash-002',
-        'gemini-1.5-pro-latest',
-        'gemini-1.5-pro',
-      ];
-    }
+    // Combine preferred models first, then any remaining discovered models without duplicates
+    const candidateModels = Array.from(
+      new Set([...PREFERRED_MODELS, ...discoveredModels]),
+    );
 
     let geminiResponse: Response | null = null;
     let lastErrorMessage = '';

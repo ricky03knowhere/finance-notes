@@ -23,9 +23,6 @@ type BillManagerProps = {
 export function BillManager({ initialDashboard }: BillManagerProps) {
   const { data, mutate } = useSWR<{ dashboard: BillDashboard }>('/api/bills', fetcher, {
     fallbackData: { dashboard: initialDashboard },
-    refreshInterval: 30000,
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
   });
   const dashboard = data?.dashboard ?? initialDashboard;
   const [createOpen, setCreateOpen] = useState(false);

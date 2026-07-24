@@ -23,11 +23,8 @@ type BudgetManagerProps = {
 };
 
 export function BudgetManager({ initialDashboard }: BudgetManagerProps) {
-  const { data, mutate, isLoading } = useSWR<{ dashboard: BudgetDashboard }>('/api/budgets', fetcher, {
+  const { data, mutate } = useSWR<{ dashboard: BudgetDashboard }>('/api/budgets', fetcher, {
     fallbackData: { dashboard: initialDashboard },
-    refreshInterval: 30000,
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
   });
   const dashboard = data?.dashboard ?? initialDashboard;
   const [createOpen, setCreateOpen] = useState(false);
@@ -43,10 +40,6 @@ export function BudgetManager({ initialDashboard }: BudgetManagerProps) {
     ],
     [dashboard.summary],
   );
-
-  async function refreshDashboard() {
-    await mutate();
-  }
 
   async function handleCreate(values: BudgetFormValues) {
     const response = await fetch('/api/budgets', {

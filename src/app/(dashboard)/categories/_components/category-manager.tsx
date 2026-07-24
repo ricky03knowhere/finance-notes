@@ -27,9 +27,6 @@ type CategoryManagerProps = {
 export function CategoryManager({ initialDashboard }: CategoryManagerProps) {
   const { data, mutate } = useSWR<{ dashboard: CategoryDashboard }>('/api/categories', fetcher, {
     fallbackData: { dashboard: initialDashboard },
-    refreshInterval: 30000,
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
   });
   const dashboard = data?.dashboard ?? initialDashboard;
   const [createOpen, setCreateOpen] = useState(false);
